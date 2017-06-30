@@ -1464,11 +1464,39 @@ RtmpIoctl_rt_ioctl_siwfreq(
 
     if (ChannelSanity(pAd, chan) == true)
     {
-	pAd->CommonCfg.Channel = chan;
+		pAd->CommonCfg.Channel = chan;
 		/* Save the channel on MlmeAux for CntlOidRTBssidProc used. */
 		pAd->MlmeAux.Channel = pAd->CommonCfg.Channel;
 		/*save connect info*/
 		pAd->StaCfg.ConnectinfoChannel = pAd->CommonCfg.Channel;
+		if (MONITOR_ON(pAd))
+		{
+		/* same procedure with window driver */
+#ifdef DOT11_N_SUPPORT
+		if (WMODE_CAP_N(pAd->CommonCfg.PhyMode) &&
+			pAd->CommonCfg.RegTransmitSetting.field.BW == BW_40 &&
+			pAd->CommonCfg.RegTransmitSetting.field.EXTCHA == EXTCHA_ABOVE)
+		{
+			/* 40MHz ,control channel at lower */
+			pAd->CommonCfg.CentralChannel = pAd->CommonCfg.Channel + 2;
+			AsicSetChannel(pAd, pAd->CommonCfg.CentralChannel,
+			               BW_40, EXTCHA_ABOVE, false);
+		}
+		else if (WMODE_CAP_N(pAd->CommonCfg.PhyMode) &&
+	                 pAd->CommonCfg.RegTransmitSetting.field.BW == BW_40 &&
+		              pAd->CommonCfg.RegTransmitSetting.field.EXTCHA == EXTCHA_BELOW)
+		{
+			/* 40MHz ,control channel at upper */
+			pAd->CommonCfg.CentralChannel = pAd->CommonCfg.Channel - 2;
+			AsicSetChannel(pAd, pAd->CommonCfg.CentralChannel,
+			               BW_40, EXTCHA_BELOW, false);
+		}
+		else
+#endif /* DOT11_N_SUPPORT */
+		{
+			AsicSetChannel(pAd, chan, BW_20, EXTCHA_NONE, false);
+		}
+		}
 	DBGPRINT(RT_DEBUG_ERROR, ("==>rt_ioctl_siwfreq::SIOCSIWFREQ(Channel=%d)\n", pAd->CommonCfg.Channel));
     }
     else
